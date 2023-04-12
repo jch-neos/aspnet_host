@@ -1,24 +1,32 @@
-﻿using Microsoft.AspNetCore;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Hosting.Internal;
-using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
-using System.Buffers;
-using System.Diagnostics;
+﻿using System.Buffers;
 using System.Text;
-using System.Text.Json;
-using System.Text.Unicode;
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
 
 // var builder = WebHost.CreateDefaultBuilder<MyStartup>(args);
 var builder = WebApplication.CreateBuilder(args);
+// builder.Services.AddSingleton(sp=>sp);
+// builder.Services.AddScoped<Mediator>();
+// builder.Services.AddScoped<GetBookCommandHandler>();
+builder.Services.AddMediatR(c=>{
+    c.RegisterServicesFromAssembly(typeof(GetBookCommand).Assembly);
+});
+
+var collection = builder.Services;
+
+// collection.Scan(scan => scan
+//     .FromAssemblyOf<ITransientService>()
+//         .AddClasses(classes => classes.AssignableTo<ITransientService>())
+//             .AsImplementedInterfaces()
+//             .WithTransientLifetime()
+//         .AddClasses(classes => classes.AssignableTo<IScopedService>())
+//             .As<IScopedService>()
+//             .WithScopedLifetime()
+//         .AddClasses(classes => classes.AssignableTo(typeof(IOpenGeneric<>)))
+//             .AsImplementedInterfaces()
+//         .AddClasses(classes => classes.AssignableTo(typeof(IQueryHandler<,>)))
+//             .AsImplementedInterfaces());
+
 // var builder = new WebHost();
 // builder
 //     .UseContentRoot(Directory.GetCurrentDirectory())
@@ -37,6 +45,7 @@ var builder = WebApplication.CreateBuilder(args);
 //     .UseStartup<MyStartup>();
 
 var app = builder.Build();
+
 
 app.UseRouting();
 
@@ -61,6 +70,9 @@ app.MapGet("/", () => "Audit isn't required.");
 app.MapGet("/sensitive", () => "Audit required for sensitive data.")
     .WithMetadata(new RequiresAuditAttribute());
 
+app.MapGet("/book/{id:int}", 
+    ([FromServices] IMediator m, int id) => 
+        m.Send(new GetBookCommand(id)));
 
 await app.StartAsync();
 await app.WaitForShutdownAsync();
